@@ -3,42 +3,41 @@ set -uo pipefail
 trap 'echo "❌ Erro na linha $LINENO: $BASH_COMMAND"' ERR
 
 # ============================
-# 1. Garantir uso do Miniconda local
+# 1. Descobrir onde está o Miniconda
 # ============================
-export PATH="$HOME/miniconda/bin:$PATH"
-
-# Função para inicializar conda
-init_conda() {
-    if [ -f "$HOME/miniconda/etc/profile.d/conda.sh" ]; then
-        source "$HOME/miniconda/etc/profile.d/conda.sh"
-    else
-        echo "⚠️ Arquivo conda.sh não encontrado, verifique instalação do Miniconda."
-        exit 1
-    fi
-}
-
-# ============================
-# 2. Instalar Miniconda (se não existir)
-# ============================
-if ! [ -x "$HOME/miniconda/bin/conda" ]; then
-    echo "📦 Instalando Miniconda..."
-    curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh"
-    bash Miniforge3-Linux-x86_64.sh -b -p "$HOME/miniconda"
+if [ -x "./miniconda/bin/conda" ]; then
+    MINICONDA_DIR="$(pwd)/miniconda"
+elif [ -x "$HOME/miniconda/bin/conda" ]; then
+    MINICONDA_DIR="$HOME/miniconda"
 else
-    echo "✅ Miniconda já instalada em $HOME/miniconda"
+    MINICONDA_DIR="$HOME/miniconda"
 fi
 
-# Inicializar conda
-init_conda
+# ============================
+# 2. Instalar Miniconda se não existir
+# ============================
+if [ ! -x "$MINICONDA_DIR/bin/conda" ]; then
+    echo "📦 Instalando Miniconda em $MINICONDA_DIR ..."
+    curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh"
+    bash Miniforge3-Linux-x86_64.sh -b -p "$MINICONDA_DIR"
+else
+    echo "✅ Miniconda já instalada em $MINICONDA_DIR"
+fi
 
 # ============================
-# 3. Configurar conda-forge
+# 3. Garantir que estamos usando o conda certo
+# ============================
+export PATH="$MINICONDA_DIR/bin:$PATH"
+source "$MINICONDA_DIR/etc/profile.d/conda.sh"
+
+# ============================
+# 4. Adicionar canal conda-forge
 # ============================
 conda config --add channels conda-forge || true
 conda config --set channel_priority strict
 
 # ============================
-# 4. Criar ambiente Conda com Python + SageMath
+# 5. Criar ambiente Conda com Python + SageMath
 # ============================
 if ! conda env list | grep -q "^sage-env"; then
     echo "📦 Criando ambiente 'sage-env' com SageMath..."
@@ -56,18 +55,18 @@ else
 fi
 
 # ============================
-# 5. Ativar ambiente
+# 6. Ativar ambiente
 # ============================
 echo "🔄 Ativando ambiente..."
 conda activate sage-env
 
 # ============================
-# 6. Registrar kernel Python (com Sage) no Jupyter/VS Code
+# 7. Adicionar kernel Python (com Sage) ao Jupyter/VS Code
 # ============================
 python -m ipykernel install --user --name=sage-env --display-name "Python (SageMath)"
 
 # ============================
-# 7. Instalar SageMath portátil completo
+# 8. Instalar SageMath portátil
 # ============================
 if [ ! -d "$HOME/sage" ]; then
     echo "📦 Baixando SageMath portátil..."
@@ -83,8 +82,8 @@ echo "🔄 Registrando kernel nativo SageMath..."
 "$HOME/sage/sage" --jupyter kernel install --user --name=sagemath
 
 # ============================
-# 8. Mensagem final
+# 9. Mensagem final
 # ============================
 echo ""
 echo "✅ Todos os ambientes prontos!"
-echo "📌 Agora no VS Code/Jupyter você verá os kernels: 'Python (SageMath)' e 'SageMath'"
+echo "📌 Agora no VS Code/Jupyter você verá o kernel: SageMath"
