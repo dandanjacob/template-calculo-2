@@ -71,14 +71,34 @@ python -m ipykernel install --user --name=sage-env --display-name "Python (SageM
 if [ "$(uname -r)" != *Microsoft* ]; then
     if [ ! -d "$HOME/sage" ]; then
         echo "📦 Baixando SageMath portátil..."
-        wget -c https://mirror.math.princeton.edu/pub/sage/linux/64bit/sage-10.3-Ubuntu_22.04-x86_64.tar.bz2 -O /tmp/sage.tar.bz2
+
+        MIRRORS=(
+            "https://mirror.math.princeton.edu/pub/sage/linux/64bit/sage-10.3-Ubuntu_22.04-x86_64.tar.bz2"
+            "https://mirrors.mit.edu/sage/linux/64bit/sage-10.3-Ubuntu_22.04-x86_64.tar.bz2"
+        )
+
+        SUCCESS=0
+        for URL in "${MIRRORS[@]}"; do
+            echo "🌐 Tentando mirror: $URL"
+            if wget -c "$URL" -O /tmp/sage.tar.bz2; then
+                echo "✅ Download concluído com sucesso!"
+                SUCCESS=1
+                break
+            else
+                echo "❌ Falha no download do mirror: $URL"
+            fi
+        done
+
+        if [ $SUCCESS -ne 1 ]; then
+            echo "❌ Todos os mirrors falharam. Não é possível continuar."
+            exit 1
+        fi
 
         echo "📦 Testando integridade do arquivo..."
         bzip2 -tvv /tmp/sage.tar.bz2
 
         echo "📦 Extraindo SageMath..."
         tar -xjf /tmp/sage.tar.bz2 -C "$HOME"
-
         mv "$HOME/sage-10.3-Ubuntu_22.04-x86_64" "$HOME/sage"
     else
         echo "✅ SageMath portátil já está em $HOME/sage"
