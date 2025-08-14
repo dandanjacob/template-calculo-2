@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -uo pipefail
-trap 'echo "❌ Erro na linha $LINENO: $BASH_COMMAND"' ERR
+trap 'echo "❌ Erro na linha $LINENO: $BASH_COMMAND"; exit 1' ERR
 
 # ============================
-# 1. Descobrir onde está o Miniconda
+# 1. Detectar ou definir Miniconda
 # ============================
 if [ -x "./miniconda/bin/conda" ]; then
     MINICONDA_DIR="$(pwd)/miniconda"
@@ -25,19 +25,19 @@ else
 fi
 
 # ============================
-# 3. Garantir que estamos usando o conda certo
+# 3. Inicializar conda
 # ============================
 export PATH="$MINICONDA_DIR/bin:$PATH"
 source "$MINICONDA_DIR/etc/profile.d/conda.sh"
 
 # ============================
-# 4. Adicionar canal conda-forge
+# 4. Configurar conda-forge
 # ============================
-conda config --add channels conda-forge || true
+conda config --add channels conda-forge
 conda config --set channel_priority strict
 
 # ============================
-# 5. Criar ambiente Conda com Python + SageMath
+# 5. Criar ambiente Conda com Python + SageMath + pacotes extras
 # ============================
 if ! conda env list | grep -q "^sage-env"; then
     echo "📦 Criando ambiente 'sage-env' com SageMath..."
@@ -61,29 +61,44 @@ echo "🔄 Ativando ambiente..."
 conda activate sage-env
 
 # ============================
-# 7. Adicionar kernel Python (com Sage) ao Jupyter/VS Code
+# 7. Registrar kernel Python (com Sage) no Jupyter
 # ============================
 python -m ipykernel install --user --name=sage-env --display-name "Python (SageMath)"
 
 # ============================
-# 8. Instalar SageMath portátil
+# 8. Instalar SageMath portátil (somente Linux nativo)
 # ============================
-if [ ! -d "$HOME/sage" ]; then
-    echo "📦 Baixando SageMath portátil..."
-    wget -q --show-progress https://mirrors.mit.edu/sage/linux/64bit/sage-10.3-Ubuntu_22.04-x86_64.tar.bz2 -O /tmp/sage.tar.bz2
-    echo "📦 Extraindo SageMath..."
-    tar -xjf /tmp/sage.tar.bz2 -C "$HOME"
-    mv "$HOME/sage-10.3-Ubuntu_22.04-x86_64" "$HOME/sage"
-else
-    echo "✅ SageMath portátil já está em $HOME/sage"
-fi
+if [ "$(uname -r)" != *Microsoft* ]; then
+    if [ ! -d "$HOME/sage" ]; then
+        echo "📦 Baixando SageMath portátil..."
+        wget -c https://mirror.math.princeton.edu/pub/sage/linux/64bit/sage-10.3-Ubuntu_22.04-x86_64.tar.bz2 -O /tmp/sage.tar.bz2
 
-echo "🔄 Registrando kernel nativo SageMath..."
-"$HOME/sage/sage" --jupyter kernel install --user --name=sagemath
+        echo "📦 Testando integridade do arquivo..."
+        bzip2 -tvv /tmp/sage.tar.bz2
+
+        echo "📦 Extraindo SageMath..."
+        tar -xjf /tmp/sage.tar.bz2 -C "$HOME"
+
+        mv "$HOME/sage-10.3-Ubuntu_22.04-x86_64" "$HOME/sage"
+    else
+        echo "✅ SageMath portátil já está em $HOME/sage"
+    fi
+
+    # Registrar kernel Sage
+    if [ ! -f "$HOME/sage/sage" ]; then
+        echo "❌ SageMath não encontrado, não é possível registrar kernel."
+        exit 1
+    fi
+
+    echo "🔄 Registrando kernel nativo SageMath..."
+    "$HOME/sage/sage" --jupyter kernel install --user --name=sagemath
+else
+    echo "⚠️ WSL detectado. Ignorando SageMath portátil (use Conda Sage)"
+fi
 
 # ============================
 # 9. Mensagem final
 # ============================
 echo ""
-echo "✅ Todos os ambientes prontos!"
-echo "📌 Agora no VS Code/Jupyter você verá o kernel: SageMath"
+echo "✅ Todos os ambientes prontos com sucesso!"
+echo "📌 Agora no VS Code/Jupyter você verá os kernels: 'Python (SageMath)' e 'SageMath' (se Linux nativo)"
