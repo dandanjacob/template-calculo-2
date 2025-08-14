@@ -29,7 +29,8 @@ Fizemos um script que já prepara um ambiente com todas as ferramentas necessár
 Abra um terminal do bash e execute
 
 ```bash
-bash <(wget -qO- https://github.com/dandanjacob/template-calculo-2/setup_sage.sh)
+bash <(wget -qO- https://raw.githubusercontent.com/dandanjacob/template-calculo-2/main/setup_sage.sh)
+
 ```
 
 Isso vai preparar o ambiente com as ferramentas neessárias.
@@ -69,6 +70,7 @@ code .
 ```
 
 para abrir o VSCode já dentro do seu repositório.
+Dentro do VSCode selecione o kernell SageMath
 Sugiro manter o terminal aberto, ele vai ser útil depois.
 
 Agora o ambiente está pronto pra uso! Mão na massa!
